@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{steps.create_release.outputs.upload_url}}
+    steps:
+      - id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          tag_name: ${{github.ref}}
+          release_name: qt_${{github.ref}}
+          draft: false
+          prerelease: false
+
+  macos:
+    needs: release
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        include:
+          - os: macos-14
+            arch: arm64
+            brew: /opt/homebrew
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/macos
+        id: build
+        with:
+          vvv:  "6.8.3"
+          vv:   "6.8"
+          arch: ${{matrix.arch}}
+          brew: ${{matrix.brew}}
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          upload_url: ${{needs.release.outputs.upload_url}}
+          asset_path: ${{steps.build.outputs.path}}
+          asset_name: ${{steps.build.outputs.fn}}
+          asset_content_type: application/octet-stream

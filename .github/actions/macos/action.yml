@@ -32,20 +32,25 @@ runs:
         tar -xf qt-everywhere-src-${{inputs.vvv}}.tar.xz
         mv qt-everywhere-src-${{inputs.vvv}} qt
         cd qt/qtbase
-        patch < ../../patches/7a31e402f24ec29c571f825e06bd569477501dfc.patch
+        patch < ../../patches/CVE-2025-3512-qtbase-6.8.diff
+        patch < ../../patches/CVE-2025-4211-qtbase-6.8.diff
+        patch < ../../patches/CVE-2025-5455-qtbase-6.8.patch
+        cd ../qtimageformats
+        patch < ../../patches/CVE-2025-5683-qtimageformats-6.8.patch
         cd ..
         mkdir build && cd build
         ../configure \
           LLVM_INSTALL_DIR=${{inputs.brew}}/opt/llvm FEATURE_clang=ON \
           -prefix "./qt${{inputs.vvv}}_debug_macos_${{inputs.arch}}" \
-          -release \
           -debug \
           -opensource \
           -confirm-license \
           -nomake examples \
           -nomake tests \
           -- \
-          -DCMAKE_OSX_ARCHITECTURES="${{inputs.arch}}"
+          -DCMAKE_OSX_ARCHITECTURES="${{inputs.arch}}" \
+          -DCMAKE_OSX_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk \
+          -DQT_FORCE_WARN_APPLE_SDK_AND_XCODE_CHECK=ON
         cmake --build . --parallel "$(sysctl -n hw.ncpu)"
         cmake --install .
         tar -czf "qt${{inputs.vvv}}_debug_macos_${{inputs.arch}}.tar.gz" "qt${{inputs.vvv}}_debug_macos_${{inputs.arch}}"
